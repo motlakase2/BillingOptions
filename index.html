@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2d6a2e">
+<title>FreshTrack — Veg Invoice</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════
+     STEP 1: PASTE YOUR FIREBASE CONFIG HERE
+     Go to Firebase Console → Project Settings → firebase/app → Config
+     Replace every value below with your own project's values
+     ═══════════════════════════════════════════════════════ -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDDA8YRUbvKSrvP3gnB-gI020HO8ssH4SE",
+  authDomain:        "billing-options-93799.firebaseapp.com",
+  projectId:         "billing-options-93799",
+  storageBucket:     "billing-options-93799.firebasestorage.app",
+  messagingSenderId: "633756188033",
+  appId:             "1:633756188033:web:f23c555934ab6824ce3c80"
+};
+</script>
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+:root{
+  --g900:#0a2e0b;--g800:#1a4d1b;--g700:#2d6a2e;--g600:#3d8b3f;
+  --g500:#4caf50;--g400:#81c784;--g300:#a5d6a7;--g200:#c8e6c9;
+  --g100:#e8f5e9;--g50:#f1f8f2;
+  --amber:#f59e0b;--amber-light:#fef3c7;--amber-dark:#92400e;
+  --red:#dc2626;--red-light:#fee2e2;
+  --bg:#f4f7f4;--card:#fff;
+  --text:#1a2e1a;--text2:#4a6b4a;--text3:#7a9b7a;
+  --border:#d1e8d1;--border2:#b8d8b8;
+  --shadow-sm:0 1px 4px rgba(45,106,46,0.08);
+  --r:14px;--r-sm:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:480px;margin:0 auto;padding-bottom:90px;overflow-x:hidden}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px 24px;background:linear-gradient(160deg,var(--g800) 0%,var(--g600) 100%)}
+.login-logo{width:80px;height:80px;background:rgba(255,255,255,0.15);border-radius:24px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.login-logo svg{width:48px;height:48px}
+.login-title{color:#fff;font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:6px}
+.login-sub{color:rgba(255,255,255,0.7);font-size:14px;margin-bottom:40px;text-align:center}
+.google-btn{display:flex;align-items:center;gap:12px;background:#fff;color:#1a2e1a;border:none;border-radius:12px;padding:14px 24px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;width:100%;max-width:300px;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.15);transition:all 0.15s}
+.google-btn:active{transform:scale(0.97)}
+.google-btn svg{width:22px;height:22px}
+.login-note{color:rgba(255,255,255,0.4);font-size:11px;margin-top:16px;text-align:center;line-height:1.6}
+.config-warning{background:rgba(255,200,0,0.15);border:1px solid rgba(255,200,0,0.4);border-radius:10px;color:#ffe066;font-size:12px;padding:10px 12px;margin-bottom:16px;width:100%;max-width:320px;line-height:1.6;display:none}
+.login-box{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:20px;width:100%;max-width:320px;backdrop-filter:blur(10px)}
+.login-tabs{display:flex;border:1px solid rgba(255,255,255,0.2);border-radius:8px;overflow:hidden;margin-bottom:18px}
+.login-tab{flex:1;padding:9px;background:transparent;border:none;color:rgba(255,255,255,0.6);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.login-tab.active{background:rgba(255,255,255,0.2);color:#fff;font-weight:700}
+.login-input{width:100%;padding:11px 13px;border:1.5px solid rgba(255,255,255,0.2);border-radius:9px;background:rgba(255,255,255,0.1);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;margin-bottom:10px;transition:border 0.15s}
+.login-input::placeholder{color:rgba(255,255,255,0.45)}
+.login-input:focus{border-color:rgba(255,255,255,0.6)}
+.login-err{color:#fca5a5;font-size:12px;margin-bottom:10px;display:none;text-align:center;line-height:1.5}
+.login-err.show{display:block}
+.pw-btn{width:100%;padding:12px;background:#fff;color:var(--g800);border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;transition:all 0.15s}
+.pw-btn:active{transform:scale(0.97)}
+.pw-btn.outline{background:transparent;color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.3);font-weight:500}
+.divider-or{display:flex;align-items:center;gap:10px;margin:14px 0;color:rgba(255,255,255,0.4);font-size:12px}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.2)}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--g700);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-title{font-size:16px;font-weight:700}
+.topbar-sub{font-size:10px;opacity:0.7;margin-top:1px}
+.user-chip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.15);border-radius:20px;padding:5px 10px 5px 5px;cursor:pointer}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--g400);object-fit:cover}
+.user-avatar-fallback{width:26px;height:26px;border-radius:50%;background:var(--g500);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.user-name{font-size:12px;font-weight:600;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── SYNC INDICATOR ── */
+.sync-bar{background:var(--amber-light);border-bottom:1px solid #fcd34d;padding:6px 16px;font-size:12px;color:var(--amber-dark);display:none;align-items:center;gap:8px}
+.sync-bar.show{display:flex}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.online-bar{background:#dcfce7;border-bottom:1px solid #86efac;padding:5px 16px;font-size:12px;color:#166534;display:none;align-items:center;gap:8px}
+.online-bar.show{display:flex}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1.5px solid var(--border);display:flex;z-index:200;box-shadow:0 -2px 12px rgba(45,106,46,0.10)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;gap:3px;transition:all 0.15s}
+.nav-btn.active{color:var(--g700)}
+.nav-btn svg{width:22px;height:22px;stroke-width:1.8}
+.nav-btn.active svg{stroke-width:2.3}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:var(--g600);margin:0 auto;opacity:0}
+.nav-btn.active .nav-dot{opacity:1}
+
+/* ── PAGES ── */
+.page{display:none;padding:14px}
+.page.active{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:11px;box-shadow:var(--shadow-sm)}
+.card-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.card-title svg{width:15px;height:15px;color:var(--g600)}
+
+/* ── INVENTORY ── */
+.inv-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);gap:8px}
+.inv-item:last-child{border-bottom:none}
+.inv-name{font-size:13px;font-weight:500;flex:1;line-height:1.3}
+.inv-qty{font-family:'DM Mono',monospace;font-size:12.5px;color:var(--g700);text-align:right}
+.inv-qty.neg{color:var(--red)}
+.inv-qty.low{color:var(--amber)}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700}
+.badge-ok{background:var(--g100);color:var(--g800)}
+.badge-low{background:var(--amber-light);color:var(--amber-dark)}
+.badge-neg{background:var(--red-light);color:var(--red)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;border-radius:var(--r-sm);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:var(--g700);color:#fff}
+.btn-secondary{background:var(--g100);color:var(--g700);border:1px solid var(--g300)}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid #fca5a5}
+.btn-full{width:100%;padding:13px}
+.btn svg{width:17px;height:17px;flex-shrink:0}
+.action-row{display:flex;gap:8px;margin-top:10px}
+.action-row .btn{flex:1}
+
+/* ── FORMS ── */
+label{font-size:12.5px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px}
+input[type=text],input[type=number],input[type=tel],input[type=date],select,textarea{width:100%;padding:10px 11px;border:1.5px solid var(--border2);border-radius:var(--r-sm);font-family:inherit;font-size:14px;color:var(--text);background:#fff;outline:none;transition:border 0.15s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--g600);box-shadow:0 0 0 3px rgba(77,175,80,0.12)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a6b4a' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:34px}
+.form-row{margin-bottom:12px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── LINE ITEMS ── */
+.line-item{background:var(--g50);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:8px;position:relative}
+.line-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.line-name{font-size:13px;font-weight:700;color:var(--g800);flex:1;padding-right:28px}
+.line-total{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--g700)}
+.line-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;align-items:end}
+.rm-btn{position:absolute;top:9px;right:9px;width:24px;height:24px;border-radius:50%;background:var(--red-light);color:var(--red);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;font-weight:700;line-height:1}
+
+/* ── TOTALS ── */
+.totals-block{background:var(--g700);color:#fff;border-radius:var(--r);padding:15px}
+.totals-row{display:flex;justify-content:space-between;font-size:13.5px;padding:2px 0;opacity:0.85}
+.totals-row.grand{font-size:17px;font-weight:700;opacity:1;padding-top:9px;margin-top:6px;border-top:1px solid rgba(255,255,255,0.25)}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:18px 16px 30px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;animation:up 0.22s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:34px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px}
+.modal-title{font-size:16px;font-weight:700;color:var(--g800);margin-bottom:14px}
+
+/* ── ADD PRODUCT BUTTON ── */
+.add-btn{display:flex;align-items:center;gap:9px;width:100%;padding:11px 13px;background:var(--g50);border:1.5px dashed var(--g400);border-radius:10px;cursor:pointer;color:var(--g700);font-family:inherit;font-size:13.5px;font-weight:500;transition:all 0.15s}
+.add-btn:hover{background:var(--g100)}
+.add-btn svg{width:19px;height:19px}
+
+/* ── WARN BANNER ── */
+.warn-banner{background:var(--amber-light);border:1px solid #fcd34d;border-radius:8px;padding:9px 12px;font-size:12px;color:var(--amber-dark);margin-bottom:10px;display:flex;gap:8px;line-height:1.5}
+
+/* ── STAT GRID ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-card{background:var(--g700);color:#fff;border-radius:12px;padding:13px;text-align:center}
+.stat-val{font-size:19px;font-weight:700;font-family:'DM Mono',monospace}
+.stat-lab{font-size:10.5px;opacity:0.72;margin-top:2px}
+
+/* ── REPORT TABS ── */
+.report-tabs{display:flex;border:1.5px solid var(--border2);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.report-tab{flex:1;padding:9px 4px;background:#fff;border:none;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--text2);cursor:pointer;transition:all 0.15s}
+.report-tab.active{background:var(--g700);color:#fff;font-weight:700}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.data-table th{background:var(--g100);color:var(--g800);font-weight:700;padding:7px 9px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.4px}
+.data-table td{padding:8px 9px;border-bottom:1px solid var(--border);color:var(--text)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:nth-child(even) td{background:var(--g50)}
+
+/* ── SETUP LOGO ── */
+.setup-logo{width:72px;height:72px;border-radius:12px;border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:10px;gap:3px;background:#fff;overflow:hidden;flex-shrink:0}
+.setup-logo img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+
+/* ── USER MENU ── */
+#userMenu{position:fixed;top:55px;right:8px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:300;padding:8px;min-width:180px;display:none}
+#userMenu.open{display:block}
+.menu-item{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--text);transition:background 0.12s}
+.menu-item:hover{background:var(--g50)}
+.menu-item svg{width:16px;height:16px;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN SCREEN ═══════════ -->
+<div id="loginScreen">
+  <div id="configWarning" class="config-warning">
+    ⚠ Firebase not configured yet. Open this HTML file, find <code>FIREBASE_CONFIG</code> at the top, and paste your project values. See setup instructions below.
+  </div>
+  <div class="login-logo">
+    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="24" r="22" fill="rgba(255,255,255,0.2)"/>
+      <path d="M24 8C16 8 10 15 10 24s4 15 14 16c10-1 14-7 14-16S32 8 24 8z" fill="rgba(255,255,255,0.9)"/>
+      <path d="M24 8c0 0 2-5 5-5" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="24" cy="25" r="7" fill="#2d6a2e"/>
+    </svg>
+  </div>
+  <div class="login-title">FreshTrack</div>
+  <div class="login-sub">Vegetable Invoice & Inventory<br>Sign in to sync across devices</div>
+
+  <div class="login-box">
+    <!-- Tabs: Sign In / Register -->
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchLoginTab('signin',this)">Sign In</button>
+      <button class="login-tab" onclick="switchLoginTab('register',this)">Register</button>
+    </div>
+
+    <!-- Error message -->
+    <div class="login-err" id="loginErr"></div>
+
+    <!-- Email/Password fields -->
+    <input class="login-input" type="text" id="loginEmail" placeholder="Username or Email" autocomplete="username">
+    <input class="login-input" type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+    <input class="login-input" type="text" id="loginDisplayName" placeholder="Your name (e.g. Raja)" style="display:none" autocomplete="name">
+
+    <!-- Action buttons -->
+    <button class="pw-btn" id="loginMainBtn" onclick="handleEmailAuth()">Sign In</button>
+    <button class="pw-btn outline" id="loginForgotBtn" onclick="forgotPassword()" style="font-size:13px;padding:9px">Forgot password?</button>
+
+    <!-- Divider -->
+    <div class="divider-or">or</div>
+
+    <!-- Google -->
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Continue with Google
+    </button>
+  </div>
+  <div class="login-note">Your data syncs automatically between devices.<br>Email sign-in doesn't share your Google account.</div>
+</div>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<div id="mainApp" style="display:none">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" fill="rgba(255,255,255,0.15)"/><path d="M14 6C10 6 7 9 7 14s2 8 7 9c5-1 7-4 7-9S18 6 14 6z" fill="rgba(255,255,255,0.9)"/><circle cx="14" cy="15" r="4" fill="#2d6a2e"/></svg>
+      <div>
+        <div class="topbar-title">FreshTrack</div>
+        <div class="topbar-sub" id="topbarDate"></div>
+      </div>
+    </div>
+    <div class="user-chip" onclick="toggleUserMenu()">
+      <img id="userAvatarImg" class="user-avatar" style="display:none" alt="avatar">
+      <div id="userAvatarFallback" class="user-avatar-fallback">?</div>
+      <span class="user-name" id="userName">...</span>
+    </div>
+  </div>
+
+  <!-- User menu -->
+  <div id="userMenu">
+    <div class="menu-item" id="menuUserInfo" style="cursor:default;opacity:0.7;font-size:12px;padding:8px 12px"></div>
+    <div style="height:1px;background:var(--border);margin:4px 0"></div>
+    <div class="menu-item" onclick="signOut()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M6 3H3v10h3M10 5l3 3-3 3M13 8H6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Sign out
+    </div>
+  </div>
+
+  <!-- Sync bars -->
+  <div class="sync-bar" id="syncBar">
+    <div class="sync-dot"></div>
+    <span>Offline — changes will sync when connected</span>
+  </div>
+  <div class="online-bar" id="onlineBar">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#16a34a" stroke-width="1.5"/><path d="M4 6l1.5 1.5L8 4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span>Back online — syncing data…</span>
+  </div>
+
+  <!-- ── INVOICE PAGE ── -->
+  <div class="page active" id="page-invoice">
+    <div id="invWarnings"></div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><circle cx="8" cy="5" r="3" stroke-width="1.5"/><path d="M2 14c0-3 2.5-5 6-5s6 2 6 5" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Customer
+      </div>
+      <div class="form-row"><label>Customer Name</label><input type="text" id="custName" placeholder="Enter customer name"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>WhatsApp Number</label><input type="tel" id="custPhone" placeholder="+267 7..."></div>
+        <div class="form-row"><label>Invoice #</label><input type="text" id="invNum" placeholder="Auto"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><rect x="2" y="2" width="12" height="12" rx="2" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Line Items
+      </div>
+      <div id="lineItems"></div>
+      <button class="add-btn" onclick="openProductPicker()">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"><circle cx="10" cy="10" r="8" stroke-width="1.5"/><path d="M10 7v6M7 10h6" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add Product
+      </button>
+    </div>
+
+    <div class="card" style="padding:12px">
+      <div class="form-row"><label>Notes</label><input type="text" id="invNotes" placeholder="e.g. Cash on delivery"></div>
+      <div class="totals-block">
+        <div class="totals-row"><span>Subtotal</span><span id="tSubtotal">BWP 0.00</span></div>
+        <div class="totals-row grand"><span>TOTAL</span><span id="tTotal">BWP 0.00</span></div>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-secondary" onclick="clearInvoice()">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor"><path d="M3 3l12 12M15 3L3 15" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Clear
+        </button>
+        <button class="btn btn-primary" onclick="generateInvoice()" style="flex:2">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor"><path d="M4 4h10v10H4z" stroke-width="1.5"/><path d="M7 8h4M7 11h2" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Generate Invoice
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INVENTORY PAGE ── -->
+  <div class="page" id="page-inventory">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">7</div><div class="stat-lab">Products</div></div>
+      <div class="stat-card"><div class="stat-val" id="statLow">0</div><div class="stat-lab">Low / Negative</div></div>
+    </div>
+    <div class="card"><div class="card-title">Current Stock</div><div id="inventoryList">Loading…</div></div>
+    <button class="btn btn-primary btn-full" onclick="openHarvestModal()">
+      <svg viewBox="0 0 18 18" fill="none" stroke="currentColor"><path d="M9 2v10M5 6l4-4 4 4M3 14h12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Record Harvest / Goods In
+    </button>
+  </div>
+
+  <!-- ── REPORTS PAGE ── -->
+  <div class="page" id="page-reports">
+    <div class="report-tabs">
+      <button class="report-tab active" data-r="sales" onclick="switchReport('sales',this)">Sales</button>
+      <button class="report-tab" data-r="harvest" onclick="switchReport('harvest',this)">Harvest</button>
+      <button class="report-tab" data-r="invoices" onclick="switchReport('invoices',this)">Invoices</button>
+    </div>
+    <div id="reportContent">Loading…</div>
+  </div>
+
+  <!-- ── SETUP PAGE ── -->
+  <div class="page" id="page-setup">
+    <div class="card">
+      <div class="card-title">Company Profile</div>
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <label style="margin-bottom:5px">Logo</label>
+          <div class="setup-logo" onclick="document.getElementById('logoInput').click()" id="logoPreview">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor"><rect x="2" y="2" width="16" height="16" rx="3" stroke-width="1.5"/><circle cx="7" cy="7" r="2" stroke-width="1.3"/><path d="M2 14l5-4 4 3 3-3 4 4" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span>Upload</span>
+          </div>
+          <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="loadLogo(event)">
+        </div>
+        <div style="flex:1">
+          <div class="form-row"><label>Company Name</label><input type="text" id="setupCompany" placeholder="Your Farm Name"></div>
+          <div class="form-row"><label>Tagline</label><input type="text" id="setupTagline" placeholder="Fresh from the farm"></div>
+        </div>
+      </div>
+      <div class="form-row"><label>Address</label><textarea id="setupAddress" rows="2" placeholder="Street, City, Country"></textarea></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Phone</label><input type="tel" id="setupPhone"></div>
+        <div class="form-row"><label>Email</label><input type="text" id="setupEmail"></div>
+      </div>
+      <div class="form-row"><label>Currency</label><input type="text" id="setupCurrency" placeholder="BWP" style="width:80px"></div>
+      <button class="btn btn-primary btn-full" onclick="saveSetup()">Save & Sync Profile</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Signed-in Devices</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6">Both phones sign in with the same Google account. All invoices, inventory and harvest records sync in real-time. Data is stored securely in Firebase Firestore.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Data</div>
+      <div class="action-row">
+        <button class="btn btn-secondary" onclick="exportData()">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor"><path d="M9 2v10M5 8l4 4 4-4M3 14h12" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Export JSON
+        </button>
+        <button class="btn btn-danger" onclick="confirmReset()">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor"><path d="M3 9a6 6 0 1 1 0 .01M3 9 1 7M3 9l2-2" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Reset All
+        </button>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px">Version 2.0 · FreshTrack · Firebase Sync</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── BOTTOM NAV ── -->
+<nav class="bottom-nav" id="bottomNav" style="display:none">
+  <button class="nav-btn active" onclick="showPage('invoice',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="3" width="16" height="18" rx="2" stroke-width="1.8"/><path d="M8 8h8M8 12h6M8 16h4" stroke-width="1.8" stroke-linecap="round"/></svg>
+    Invoice
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-btn" onclick="showPage('inventory',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-6 9 6-9 6-9-6z" stroke-width="1.8"/><path d="M3 9v6l9 6V15M21 9v6l-9 6" stroke-width="1.8"/></svg>
+    Stock
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-btn" onclick="showPage('reports',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 20V14M8 20V10M12 20V4M16 20V14M20 20V10" stroke-width="1.8" stroke-linecap="round"/></svg>
+    Reports
+    <div class="nav-dot"></div>
+  </button>
+  <button class="nav-btn" onclick="showPage('setup',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3" stroke-width="1.8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M17.7 6.3l-1.4 1.4M6.3 17.7l-1.4 1.4" stroke-width="1.8" stroke-linecap="round"/></svg>
+    Setup
+    <div class="nav-dot"></div>
+  </button>
+</nav>
+
+<!-- ── HARVEST MODAL ── -->
+<div class="modal-overlay" id="harvestModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Record Harvest / Goods In</div>
+    <div class="form-row">
+      <label>Product</label>
+      <select id="harvestProduct" onchange="updateHarvestNote()">
+        <option value="gp-loose">Green Pepper Loose</option>
+        <option value="gp-prepack">Green Pepper ½kg Prepack</option>
+        <option value="tom-loose">Tomatoes Loose</option>
+        <option value="tom-prepack">Tomatoes 1kg Prepack</option>
+        <option value="cab-head">Cabbage Heads</option>
+        <option value="beet-loose">Beetroot Loose</option>
+        <option value="beet-prepack">Beetroot 1kg Prepack</option>
+      </select>
+    </div>
+    <div id="harvestNote" style="font-size:12.5px;color:var(--text2);background:var(--g50);border-radius:7px;padding:8px 11px;margin-bottom:10px;border:1px solid var(--border)"></div>
+    <div class="form-grid">
+      <div class="form-row"><label id="harvestQtyLbl">Quantity (Crates)</label><input type="number" id="harvestQty" min="0" step="0.5" placeholder="0"></div>
+      <div class="form-row"><label>Date</label><input type="date" id="harvestDate"></div>
+    </div>
+    <div class="form-row"><label>Notes</label><input type="text" id="harvestNotes" placeholder="Supplier, field…"></div>
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="closeModal('harvestModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="recordHarvest()" style="flex:2">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" width="16" height="16"><path d="M9 2v10M5 6l4-4 4 4M3 14h12" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Record
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRODUCT PICKER MODAL ── -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Product</div>
+    <div id="productPickerList" style="display:grid;gap:7px"></div>
+    <button class="btn btn-secondary btn-full" onclick="closeModal('productModal')" style="margin-top:12px">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// PRODUCT DEFINITIONS
+// ═══════════════════════════════════════
+const PRODUCTS=[
+  {id:'gp-loose',   name:'Green Pepper Loose',       defUom:'kg',   harvestUnit:'crate',crateKg:10},
+  {id:'gp-prepack', name:'Green Pepper ½kg Prepack',  defUom:'pcs',  harvestUnit:'crate',crateKg:10},
+  {id:'tom-loose',  name:'Tomatoes Loose',            defUom:'kg',   harvestUnit:'crate',crateKg:20},
+  {id:'tom-prepack',name:'Tomatoes 1kg Prepack',      defUom:'pcs',  harvestUnit:'crate',crateKg:20},
+  {id:'cab-head',   name:'Cabbage Heads',             defUom:'heads',harvestUnit:'pcs',  crateKg:null},
+  {id:'beet-loose', name:'Beetroot Loose',            defUom:'kg',   harvestUnit:'crate',crateKg:20},
+  {id:'beet-prepack',name:'Beetroot 1kg Prepack',     defUom:'pcs',  harvestUnit:'pcs',  crateKg:null},
+];
+const UOMS=['kg','crate','bucket','pcs','heads'];
+
+// ═══════════════════════════════════════
+// FIREBASE INIT
+// ═══════════════════════════════════════
+let db, auth, currentUser=null;
+let inventory={}, setup={currency:'BWP'}, invCounter=1;
+let currentLines=[], savedPrices={};
+let unsubInventory=null, unsubSetup=null;
+const BIZ_ID='freshtrack-main'; // shared business document
+
+function initFirebase(){
+  if(FIREBASE_CONFIG.apiKey==='PASTE_YOUR_apiKey_HERE'){
+    document.getElementById('configWarning').style.display='block';
+    return false;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.firestore();
+    auth=firebase.auth();
+    // Enable offline persistence
+    db.enablePersistence({synchronizeTabs:true}).catch(e=>{
+      if(e.code==='failed-precondition')console.warn('Multiple tabs open; persistence only in one.');
+      else if(e.code==='unimplemented')console.warn('Offline persistence not supported in this browser.');
+    });
+    // Auth state
+    auth.onAuthStateChanged(user=>{
+      if(user){currentUser=user;onSignedIn(user);}
+      else{onSignedOut();}
+    });
+    // Online/offline
+    window.addEventListener('online',()=>{showOnlineBar();});
+    window.addEventListener('offline',()=>{showSyncBar();});
+    return true;
+  }catch(e){console.error('Firebase init error:',e);return false;}
+}
+
+// ═══════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════
+let loginMode='signin'; // 'signin' or 'register'
+
+function switchLoginTab(mode, btn){
+  loginMode=mode;
+  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  clearLoginErr();
+  const nameField=document.getElementById('loginDisplayName');
+  const mainBtn=document.getElementById('loginMainBtn');
+  const forgotBtn=document.getElementById('loginForgotBtn');
+  const pwField=document.getElementById('loginPassword');
+  if(mode==='register'){
+    nameField.style.display='block';
+    mainBtn.textContent='Create Account';
+    forgotBtn.style.display='none';
+    pwField.placeholder='Choose a password (min 6 chars)';
+    pwField.autocomplete='new-password';
+  } else {
+    nameField.style.display='none';
+    mainBtn.textContent='Sign In';
+    forgotBtn.style.display='block';
+    pwField.placeholder='Password';
+    pwField.autocomplete='current-password';
+  }
+}
+
+function showLoginErr(msg){
+  const el=document.getElementById('loginErr');
+  el.textContent=msg; el.classList.add('show');
+}
+function clearLoginErr(){
+  const el=document.getElementById('loginErr');
+  el.textContent=''; el.classList.remove('show');
+}
+
+async function handleEmailAuth(){
+  clearLoginErr();
+  let email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  const displayName=document.getElementById('loginDisplayName').value.trim();
+
+  if(!email){showLoginErr('Please enter your username or email.');return;}
+  if(!password){showLoginErr('Please enter your password.');return;}
+
+  // If no @ sign, treat as username → append a fixed domain
+  if(!email.includes('@')) email=email.toLowerCase()+'@freshtrack.app';
+
+  if(loginMode==='register'){
+    if(!displayName){showLoginErr('Please enter your name.');return;}
+    if(password.length<6){showLoginErr('Password must be at least 6 characters.');return;}
+    try{
+      const cred=await auth.createUserWithEmailAndPassword(email,password);
+      await cred.user.updateProfile({displayName});
+      // Reload so displayName is available
+      await auth.currentUser.reload();
+    }catch(e){
+      if(e.code==='auth/email-already-in-use')showLoginErr('Username already taken. Try signing in.');
+      else showLoginErr(friendlyAuthError(e));
+    }
+  } else {
+    try{
+      await auth.signInWithEmailAndPassword(email,password);
+    }catch(e){
+      if(e.code==='auth/user-not-found')showLoginErr('Username not found. Register first.');
+      else if(e.code==='auth/wrong-password')showLoginErr('Wrong password. Try again.');
+      else showLoginErr(friendlyAuthError(e));
+    }
+  }
+}
+
+async function forgotPassword(){
+  clearLoginErr();
+  let email=document.getElementById('loginEmail').value.trim();
+  if(!email){showLoginErr('Enter your email address above first.');return;}
+  if(!email.includes('@'))email=email+'@freshtrack.app';
+  try{
+    await auth.sendPasswordResetEmail(email);
+    showLoginErr('✅ Reset email sent! Check your inbox.');
+  }catch(e){showLoginErr(friendlyAuthError(e));}
+}
+
+function friendlyAuthError(e){
+  const map={
+    'auth/invalid-email':'Invalid email address.',
+    'auth/too-many-requests':'Too many attempts. Try again later.',
+    'auth/network-request-failed':'No internet connection.',
+    'auth/weak-password':'Password too weak — use 6+ characters.',
+  };
+  return map[e.code]||e.message||'Sign-in failed. Try again.';
+}
+
+async function signInWithGoogle(){
+  if(!auth){if(!initFirebase())return;}
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+  }catch(e){
+    if(e.code==='auth/popup-blocked'){showLoginErr('Popup blocked — allow popups for this page.');}
+    else showLoginErr(friendlyAuthError(e));
+  }
+}
+
+async function signOut(){
+  closeUserMenu();
+  await auth.signOut();
+}
+
+function onSignedIn(user){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  document.getElementById('bottomNav').style.display='flex';
+  // Avatar
+  const img=document.getElementById('userAvatarImg');
+  const fb=document.getElementById('userAvatarFallback');
+  if(user.photoURL){img.src=user.photoURL;img.style.display='block';fb.style.display='none';}
+  else{fb.textContent=(user.displayName||user.email||'U')[0].toUpperCase();}
+  document.getElementById('userName').textContent=(user.displayName||user.email||'').split(' ')[0];
+  document.getElementById('menuUserInfo').textContent=user.email||user.displayName||'';
+  setDate();
+  startListeners();
+  setAutoInvNum();
+  updateHarvestNote();
+  document.getElementById('harvestDate').value=todayStr();
+}
+
+function onSignedOut(){
+  currentUser=null;
+  if(unsubInventory)unsubInventory();
+  if(unsubSetup)unsubSetup();
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('bottomNav').style.display='none';
+}
+
+// ═══════════════════════════════════════
+// FIRESTORE REAL-TIME LISTENERS
+// ═══════════════════════════════════════
+function startListeners(){
+  const bizRef=db.collection('business').doc(BIZ_ID);
+
+  // Inventory listener
+  unsubInventory=bizRef.collection('inventory').onSnapshot(snap=>{
+    inventory={};
+    snap.forEach(doc=>inventory[doc.id]=doc.data().qty||0);
+    renderInventory();
+    renderInvWarnings();
+  },{includeMetadataChanges:false});
+
+  // Setup listener
+  unsubSetup=bizRef.onSnapshot(snap=>{
+    if(snap.exists){
+      setup={...snap.data()};
+      loadSetupForm();
+    }
+  },{includeMetadataChanges:false});
+
+  // Load invoice counter
+  bizRef.get().then(doc=>{
+    if(doc.exists&&doc.data().invCounter)invCounter=doc.data().invCounter;
+    setAutoInvNum();
+  });
+}
+
+// ═══════════════════════════════════════
+// INVENTORY WRITE
+// ═══════════════════════════════════════
+async function setInventoryQty(pid, qty){
+  const ref=db.collection('business').doc(BIZ_ID).collection('inventory').doc(pid);
+  await ref.set({qty},{ merge:true });
+}
+
+// ═══════════════════════════════════════
+// INVENTORY RENDER
+// ═══════════════════════════════════════
+function renderInventory(){
+  const list=document.getElementById('inventoryList');
+  let low=0;
+  list.innerHTML=PRODUCTS.map(p=>{
+    const qty=inventory[p.id]||0;
+    let display,badgeCls,qtyCls='';
+    if(p.id==='cab-head'){display=qty.toFixed(0)+' heads';}
+    else if(p.crateKg){display=(qty/p.crateKg).toFixed(2)+' crates ('+qty.toFixed(1)+' kg)';}
+    else{display=qty.toFixed(0)+' pcs';}
+    if(qty<0){badgeCls='badge-neg';qtyCls='neg';low++;}
+    else if(qty===0){badgeCls='badge-low';low++;}
+    else if(qty<(p.crateKg||5)){badgeCls='badge-low';qtyCls='low';low++;}
+    else{badgeCls='badge-ok';}
+    const badgeTxt=qty<0?'Negative':qty===0?'Empty':'OK';
+    return `<div class="inv-item">
+      <div><div class="inv-name">${p.name}</div></div>
+      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <div class="inv-qty ${qtyCls}">${display}</div>
+        <span class="badge ${badgeCls}">${badgeTxt}</span>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('statLow').textContent=low;
+}
+
+function renderInvWarnings(){
+  const w=document.getElementById('invWarnings');
+  const negs=PRODUCTS.filter(p=>(inventory[p.id]||0)<0);
+  w.innerHTML=negs.length
+    ?`<div class="warn-banner"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="flex-shrink:0;margin-top:1px"><path d="M8 1L1 13h14L8 1z" stroke-width="1.5"/><path d="M8 6v3M8 11v1" stroke-width="1.5" stroke-linecap="round"/></svg><div>Negative stock: <b>${negs.map(p=>p.name).join(', ')}</b></div></div>`
+    :'';
+}
+
+// ═══════════════════════════════════════
+// HARVEST
+// ═══════════════════════════════════════
+function openHarvestModal(){openModal('harvestModal');updateHarvestNote();}
+function updateHarvestNote(){
+  const pid=document.getElementById('harvestProduct').value;
+  const p=PRODUCTS.find(x=>x.id===pid);
+  const lbl=document.getElementById('harvestQtyLbl');
+  const note=document.getElementById('harvestNote');
+  if(p.harvestUnit==='crate'){
+    lbl.textContent='Quantity (Crates)';
+    note.textContent=`Harvest in Crates. 1 Crate = ${p.crateKg} kg for this product.`;
+  } else {
+    lbl.textContent='Quantity (Pcs)';
+    note.textContent=`Harvest in Pieces for ${p.name}.`;
+  }
+}
+
+async function recordHarvest(){
+  const pid=document.getElementById('harvestProduct').value;
+  const qty=parseFloat(document.getElementById('harvestQty').value)||0;
+  const date=document.getElementById('harvestDate').value||todayStr();
+  const notes=document.getElementById('harvestNotes').value;
+  if(qty<=0){alert('Enter a valid quantity.');return;}
+  const p=PRODUCTS.find(x=>x.id===pid);
+  const addKg=p.harvestUnit==='crate'?qty*p.crateKg:qty;
+  const newQty=(inventory[pid]||0)+addKg;
+  // Write to Firestore
+  await setInventoryQty(pid, newQty);
+  await db.collection('business').doc(BIZ_ID).collection('harvests').add({
+    pid, productName:p.name, qty, unit:p.harvestUnit, addKg,
+    date, notes, ts:firebase.firestore.FieldValue.serverTimestamp(),
+    by:currentUser?.displayName||currentUser?.email||'unknown'
+  });
+  closeModal('harvestModal');
+  showToast('Harvest recorded for '+p.name);
+  document.getElementById('harvestQty').value='';
+  document.getElementById('harvestNotes').value='';
+}
+
+// ═══════════════════════════════════════
+// INVOICE LINE ITEMS
+// ═══════════════════════════════════════
+function openProductPicker(){
+  const list=document.getElementById('productPickerList');
+  list.innerHTML=PRODUCTS.map(p=>{
+    const qty=inventory[p.id]||0;
+    let stockLabel;
+    if(p.id==='cab-head')stockLabel=qty.toFixed(0)+' hd';
+    else if(p.crateKg)stockLabel=(qty/p.crateKg).toFixed(1)+' cr';
+    else stockLabel=qty.toFixed(0)+' pc';
+    const badgeCls=qty<=0?'badge-low':'badge-ok';
+    return `<button onclick="addLine('${p.id}');closeModal('productModal')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 13px;background:var(--g50);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;gap:8px;transition:background 0.12s" onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background='var(--g50)'">
+      <div>
+        <div style="font-size:13.5px;font-weight:600;color:var(--text)">${p.name}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">Default: ${p.defUom}</div>
+      </div>
+      <span class="badge ${badgeCls}">${stockLabel}</span>
+    </button>`;
+  }).join('');
+  openModal('productModal');
+}
+
+function addLine(pid){
+  const p=PRODUCTS.find(x=>x.id===pid);
+  currentLines.push({pid,name:p.name,uom:p.defUom,qty:1,price:savedPrices[pid]||0});
+  renderLines();
+}
+
+function renderLines(){
+  const c=document.getElementById('lineItems');
+  const curr=setup.currency||'BWP';
+  if(!currentLines.length){
+    c.innerHTML=`<div style="text-align:center;color:var(--text3);padding:14px 0;font-size:13px">No items yet — tap "Add Product"</div>`;
+    updateTotals();return;
+  }
+  c.innerHTML=currentLines.map((l,i)=>`
+    <div class="line-item">
+      <div class="line-head">
+        <div class="line-name">${l.name}</div>
+        <div class="line-total">${curr} ${(l.qty*l.price).toFixed(2)}</div>
+      </div>
+      <div class="line-controls">
+        <div><label>Qty</label><input type="number" value="${l.qty}" min="0" step="0.5" onchange="upLine(${i},'qty',this.value)" style="width:100%"></div>
+        <div><label>UOM</label><select onchange="upLine(${i},'uom',this.value)" style="width:100%">${UOMS.map(u=>`<option ${u===l.uom?'selected':''}>${u}</option>`).join('')}</select></div>
+        <div><label>Price</label><input type="number" value="${l.price}" min="0" step="0.5" onchange="upLine(${i},'price',this.value)" style="width:100%"></div>
+      </div>
+      <button class="rm-btn" onclick="rmLine(${i})">×</button>
+    </div>`).join('');
+  updateTotals();
+}
+
+function upLine(i,f,v){currentLines[i][f]=(f==='uom')?v:(parseFloat(v)||0);renderLines();}
+function rmLine(i){currentLines.splice(i,1);renderLines();}
+function updateTotals(){
+  const sub=currentLines.reduce((s,l)=>s+(l.qty*l.price),0);
+  const curr=setup.currency||'BWP';
+  document.getElementById('tSubtotal').textContent=curr+' '+sub.toFixed(2);
+  document.getElementById('tTotal').textContent=curr+' '+sub.toFixed(2);
+}
+function clearInvoice(){if(confirm('Clear all items?')){currentLines=[];renderLines();setAutoInvNum();}}
+
+// ═══════════════════════════════════════
+// GENERATE INVOICE
+// ═══════════════════════════════════════
+async function generateInvoice(){
+  if(!currentLines.length){alert('Add at least one product.');return;}
+  const custName=document.getElementById('custName').value||'Walk-in Customer';
+  const custPhone=document.getElementById('custPhone').value||'';
+  const invNum=document.getElementById('invNum').value||autoInvNum();
+  const notes=document.getElementById('invNotes').value||'';
+  const curr=setup.currency||'BWP';
+  const total=currentLines.reduce((s,l)=>s+(l.qty*l.price),0);
+
+  // Deduct inventory
+  let warnings=[];
+  for(const line of currentLines){
+    const p=PRODUCTS.find(x=>x.id===line.pid);if(!p)continue;
+    let deduct=0;
+    if(line.uom==='kg')deduct=line.qty;
+    else if(line.uom==='crate'&&p.crateKg)deduct=line.qty*p.crateKg;
+    else deduct=line.qty;
+    const newQty=(inventory[p.id]||0)-deduct;
+    await setInventoryQty(p.id, newQty);
+    if(newQty<0)warnings.push(p.name);
+  }
+
+  const invObj={invNum,custName,custPhone,lines:[...currentLines],total,notes,date:todayStr(),curr,
+    ts:firebase.firestore.FieldValue.serverTimestamp(),
+    by:currentUser?.displayName||currentUser?.email||'unknown'};
+
+  await db.collection('business').doc(BIZ_ID).collection('invoices').doc(invNum).set(invObj);
+  invCounter++;
+  await db.collection('business').doc(BIZ_ID).set({invCounter},{merge:true});
+  currentLines.forEach(l=>{savedPrices[l.pid]=l.price;});
+
+  if(warnings.length)showToast('⚠ Negative stock: '+warnings.join(', '),4000);
+  else showToast('Invoice '+invNum+' saved!');
+
+  try{
+    const blob=await buildPDF({...invObj,ts:todayStr()});
+    openWhatsApp({custName,custPhone,invNum,total,curr},blob);
+  }catch(e){showToast('PDF error: '+e.message,4000);}
+
+  currentLines=[];renderLines();setAutoInvNum();
+}
+
+function autoInvNum(){return 'INV-'+String(invCounter).padStart(4,'0');}
+function setAutoInvNum(){document.getElementById('invNum').value=autoInvNum();}
+
+// ═══════════════════════════════════════
+// PDF BUILDER
+// ═══════════════════════════════════════
+async function buildPDF(inv){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a5'});
+  const s=setup; const curr=inv.curr||'BWP'; let y=10;
+
+  if(s.logo){
+    try{doc.addImage(s.logo,'PNG',10,y,22,22);}catch{}
+    doc.setFontSize(15);doc.setFont('helvetica','bold');doc.setTextColor(45,106,46);
+    doc.text(s.company||'FreshTrack',36,y+7);
+    doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(80,120,80);
+    if(s.tagline)doc.text(s.tagline,36,y+13);
+    if(s.address)doc.text(s.address,36,y+18);
+    y+=28;
+  } else {
+    doc.setFontSize(17);doc.setFont('helvetica','bold');doc.setTextColor(45,106,46);
+    doc.text(s.company||'FreshTrack',10,y+6);
+    doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(80,120,80);
+    if(s.tagline)doc.text(s.tagline,10,y+12);
+    if(s.address)doc.text(s.address,10,y+17);
+    y+=24;
+  }
+  doc.setDrawColor(45,106,46);doc.setLineWidth(0.7);doc.line(10,y,138,y);y+=5;
+  doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(40,40,40);
+  doc.text('Invoice: '+inv.invNum,10,y+4);doc.text('Date: '+(inv.date||inv.ts||todayStr()),72,y+4);y+=6;
+  doc.text('Bill To: '+inv.custName,10,y+4);
+  if(inv.custPhone)doc.text('Tel: '+inv.custPhone,72,y+4);
+  y+=8;
+  doc.setFillColor(45,106,46);doc.rect(10,y,128,6.5,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(255,255,255);
+  doc.text('Product',12,y+4.4);doc.text('Qty',74,y+4.4,{align:'right'});
+  doc.text('UOM',79,y+4.4);doc.text('Price',108,y+4.4,{align:'right'});
+  doc.text('Total',138,y+4.4,{align:'right'});
+  y+=7;
+  doc.setFont('helvetica','normal');doc.setTextColor(30,30,30);
+  inv.lines.forEach((l,i)=>{
+    if(i%2===0){doc.setFillColor(241,248,241);doc.rect(10,y-0.5,128,6.5,'F');}
+    doc.setFontSize(8.2);
+    const nm=l.name.length>28?l.name.slice(0,26)+'…':l.name;
+    doc.text(nm,12,y+4);doc.text(String(l.qty),76,y+4,{align:'right'});
+    doc.text(l.uom,79,y+4);doc.text(curr+' '+parseFloat(l.price).toFixed(2),110,y+4,{align:'right'});
+    doc.text(curr+' '+(l.qty*l.price).toFixed(2),138,y+4,{align:'right'});
+    y+=7;
+  });
+  y+=3;doc.setDrawColor(45,106,46);doc.setLineWidth(0.4);doc.line(72,y,138,y);y+=4;
+  const tot=inv.lines.reduce((s,l)=>s+(l.qty*l.price),0);
+  doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(45,106,46);
+  doc.text('TOTAL: '+curr+' '+tot.toFixed(2),138,y+4,{align:'right'});y+=8;
+  if(inv.notes){doc.setFontSize(7.5);doc.setFont('helvetica','italic');doc.setTextColor(100,130,100);doc.text('Notes: '+inv.notes,10,y);y+=5;}
+  doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);
+  doc.text('Thank you for your business!',74,y+4,{align:'center'});
+  if(s.phone||s.email){y+=4;doc.text([s.phone,s.email].filter(Boolean).join(' | '),74,y+4,{align:'center'});}
+  return doc.output('blob');
+}
+
+function openWhatsApp(inv,blob){
+  const msg=`Hello ${inv.custName},\n\nYour invoice *${inv.invNum}* is ready.\nAmount: *${inv.curr} ${inv.total.toFixed(2)}*\nDate: ${todayStr()}\n\nThank you!\n_${setup.company||'FreshTrack'}_`;
+  const phone=inv.custPhone.replace(/[^0-9]/g,'');
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=inv.invNum+'.pdf';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  setTimeout(()=>{
+    const wa=phone?`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`:`https://wa.me/?text=${encodeURIComponent(msg)}`;
+    showToast('PDF downloaded! Opening WhatsApp…',2500);
+    setTimeout(()=>window.open(wa,'_blank'),800);
+  },400);
+}
+
+// ═══════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════
+async function renderReport(name){
+  const c=document.getElementById('reportContent');
+  c.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">Loading…</div>';
+  const curr=setup.currency||'BWP';
+  const bizRef=db.collection('business').doc(BIZ_ID);
+
+  if(name==='sales'){
+    const snap=await bizRef.collection('invoices').orderBy('date','desc').limit(200).get();
+    const summary={};
+    PRODUCTS.forEach(p=>{summary[p.id]={name:p.name,qty:0,total:0};});
+    let totalRev=0;
+    snap.forEach(doc=>{
+      const inv=doc.data();
+      (inv.lines||[]).forEach(l=>{
+        if(!summary[l.pid])summary[l.pid]={name:l.name,qty:0,total:0};
+        summary[l.pid].qty+=parseFloat(l.qty)||0;
+        summary[l.pid].total+=(parseFloat(l.qty)||0)*(parseFloat(l.price)||0);
+      });
+      totalRev+=inv.total||0;
+    });
+    const rows=Object.values(summary).filter(r=>r.qty>0);
+    c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${snap.size}</div><div class="stat-lab">Invoices</div></div>
+      <div class="stat-card"><div class="stat-val">${curr} ${totalRev.toFixed(0)}</div><div class="stat-lab">Total Revenue</div></div>
+    </div>
+    <div class="card" style="padding:0"><div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+      <tbody>${rows.length?rows.map(r=>`<tr><td>${r.name}</td><td>${r.qty.toFixed(1)}</td><td>${curr} ${r.total.toFixed(2)}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:18px">No sales yet</td></tr>'}</tbody>
+    </table></div></div>`;
+  }
+
+  if(name==='harvest'){
+    const snap=await bizRef.collection('harvests').orderBy('date','desc').limit(200).get();
+    const rows=[];snap.forEach(doc=>rows.push(doc.data()));
+    const totalKg=rows.reduce((s,r)=>s+r.addKg,0);
+    c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${rows.length}</div><div class="stat-lab">Records</div></div>
+      <div class="stat-card"><div class="stat-val">${totalKg.toFixed(0)} kg</div><div class="stat-lab">Total Received</div></div>
+    </div>
+    <div class="card" style="padding:0"><div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Date</th><th>Product</th><th>Qty</th><th>By</th></tr></thead>
+      <tbody>${rows.length?rows.map(r=>`<tr><td>${r.date}</td><td style="font-size:11.5px">${r.productName}</td><td>${r.qty} ${r.unit}</td><td style="font-size:11px;color:var(--text3)">${(r.by||'').split(' ')[0]}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:18px">No harvest yet</td></tr>'}</tbody>
+    </table></div></div>`;
+  }
+
+  if(name==='invoices'){
+    const snap=await bizRef.collection('invoices').orderBy('date','desc').limit(100).get();
+    const rows=[];snap.forEach(doc=>rows.push(doc.data()));
+    c.innerHTML=`
+    <div class="card" style="padding:0"><div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Inv #</th><th>Customer</th><th>Date</th><th>Total</th></tr></thead>
+      <tbody>${rows.length?rows.map(inv=>`<tr onclick="reOpenInvoice('${inv.invNum}')" style="cursor:pointer">
+        <td style="color:var(--g700);font-weight:700">${inv.invNum}</td>
+        <td>${inv.custName}</td>
+        <td style="font-size:11.5px">${inv.date}</td>
+        <td style="font-family:'DM Mono',monospace">${curr} ${(inv.total||0).toFixed(2)}</td>
+      </tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:18px">No invoices yet</td></tr>'}</tbody>
+    </table></div></div>`;
+  }
+}
+
+async function reOpenInvoice(invNum){
+  const doc=await db.collection('business').doc(BIZ_ID).collection('invoices').doc(invNum).get();
+  if(!doc.exists)return;
+  const inv=doc.data();
+  const blob=await buildPDF({...inv,date:inv.date||todayStr()});
+  window.open(URL.createObjectURL(blob),'_blank');
+}
+
+function switchReport(name,btn){
+  document.querySelectorAll('.report-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderReport(name);
+}
+
+// ═══════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════
+function loadSetupForm(){
+  document.getElementById('setupCompany').value=setup.company||'';
+  document.getElementById('setupTagline').value=setup.tagline||'';
+  document.getElementById('setupAddress').value=setup.address||'';
+  document.getElementById('setupPhone').value=setup.phone||'';
+  document.getElementById('setupEmail').value=setup.email||'';
+  document.getElementById('setupCurrency').value=setup.currency||'BWP';
+  if(setup.logo){const lp=document.getElementById('logoPreview');lp.innerHTML=`<img src="${setup.logo}">`;}
+}
+
+async function saveSetup(){
+  setup={
+    company:document.getElementById('setupCompany').value,
+    tagline:document.getElementById('setupTagline').value,
+    address:document.getElementById('setupAddress').value,
+    phone:document.getElementById('setupPhone').value,
+    email:document.getElementById('setupEmail').value,
+    currency:document.getElementById('setupCurrency').value||'BWP',
+    logo:setup.logo||''
+  };
+  await db.collection('business').doc(BIZ_ID).set(setup,{merge:true});
+  showToast('Profile saved & synced!');
+}
+
+function loadLogo(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    setup.logo=ev.target.result;
+    await db.collection('business').doc(BIZ_ID).set({logo:ev.target.result},{merge:true});
+    document.getElementById('logoPreview').innerHTML=`<img src="${ev.target.result}">`;
+    showToast('Logo uploaded!');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function exportData(){
+  const invSnap=await db.collection('business').doc(BIZ_ID).collection('invoices').get();
+  const hvSnap=await db.collection('business').doc(BIZ_ID).collection('harvests').get();
+  const invs=[]; invSnap.forEach(d=>invs.push(d.data()));
+  const hvs=[]; hvSnap.forEach(d=>hvs.push(d.data()));
+  const blob=new Blob([JSON.stringify({inventory,setup,invoices:invs,harvests:hvs},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='freshtrack_'+todayStr()+'.json';a.click();
+}
+
+async function confirmReset(){
+  if(!confirm('This will reset ALL inventory to 0. Invoices and harvests are kept. Continue?'))return;
+  for(const p of PRODUCTS)await setInventoryQty(p.id,0);
+  showToast('Inventory reset to zero.');
+}
+
+// ═══════════════════════════════════════
+// NAVIGATION & UI HELPERS
+// ═══════════════════════════════════════
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='reports')renderReport(document.querySelector('.report-tab.active')?.dataset?.r||'sales');
+  if(name==='setup')loadSetupForm();
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function toggleUserMenu(){document.getElementById('userMenu').classList.toggle('open');}
+function closeUserMenu(){document.getElementById('userMenu').classList.remove('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.user-chip')&&!e.target.closest('#userMenu'))closeUserMenu();});
+
+function setDate(){
+  const d=new Date();
+  document.getElementById('topbarDate').textContent=
+    d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+}
+function todayStr(){return new Date().toISOString().split('T')[0];}
+
+function showSyncBar(){
+  document.getElementById('syncBar').classList.add('show');
+  document.getElementById('onlineBar').classList.remove('show');
+}
+function showOnlineBar(){
+  document.getElementById('onlineBar').classList.add('show');
+  document.getElementById('syncBar').classList.remove('show');
+  setTimeout(()=>document.getElementById('onlineBar').classList.remove('show'),3500);
+}
+
+function showToast(msg,dur=2500){
+  let t=document.getElementById('ft-toast');
+  if(!t){
+    t=document.createElement('div');t.id='ft-toast';
+    t.style.cssText='position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#1a4d1b;color:#fff;padding:10px 18px;border-radius:24px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:opacity 0.3s;white-space:nowrap;max-width:90vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',dur);
+}
+
+// ═══════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════
+initFirebase();
+</script>
+</body>
+</html>
