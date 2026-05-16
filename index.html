@@ -314,9 +314,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <button onclick="clearCustomer()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:4px;line-height:1">x</button>
         </div>
       </div>
-      <!-- Debug info strip - shows customer count -->
-      <div id="custCountStrip" style="font-size:11px;color:var(--text3);margin-bottom:6px;padding:4px 8px;background:var(--g50);border-radius:6px;border:1px solid var(--border)">
-        Loading customers…
+      <!-- Status strip -->
+      <div id="custCountStrip" style="font-size:11px;color:var(--text3);margin-bottom:6px;padding:6px 10px;background:var(--g50);border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span id="custCountTxt">Loading customers…</span>
+        <button onclick="runCustDiagnostic()" style="font-size:10px;padding:3px 8px;background:var(--g200);border:none;border-radius:5px;cursor:pointer;color:var(--g800);font-weight:600">Diagnose</button>
       </div>
       <input type="hidden" id="custName">
       <input type="hidden" id="custPhone">
@@ -1321,14 +1322,14 @@ function populateCustDropdown(){
   });
   if(val)dd.value=val;
   // Update count strip
-  const strip=document.getElementById('custCountStrip');
-  if(strip){
+  const txt=document.getElementById('custCountTxt');
+  if(txt){
     if(customers.length===0){
-      strip.textContent='No customers saved yet — tap "+ New" to add one.';
-      strip.style.color='var(--amber-dark)';
+      txt.textContent='No customers yet — tap "+ New" to add';
+      txt.style.color='var(--amber-dark)';
     } else {
-      strip.textContent=customers.length+' customer'+(customers.length===1?'':'s')+' in master list';
-      strip.style.color='var(--g700)';
+      txt.textContent=customers.length+' customer'+(customers.length===1?'':'s')+' in master list ✓';
+      txt.style.color='var(--g700)';
     }
   }
 }
@@ -1836,6 +1837,49 @@ function showUploadError(msg){
   s.textContent='@keyframes blink{0%,100%{border-color:var(--amber)}50%{border-color:transparent}}';
   document.head.appendChild(s);
 })();
+
+// ═══════════════════════════════════════
+// DIAGNOSTIC TOOL
+// ═══════════════════════════════════════
+async function runCustDiagnostic(){
+  const lines=[];
+  lines.push('=== FreshTrack Diagnostic ===');
+  lines.push('User: '+(currentUser?currentUser.email:'NOT SIGNED IN'));
+  lines.push('Firebase ready: '+(db?'YES':'NO'));
+  lines.push('BIZ_ID: '+BIZ_ID);
+  lines.push('customers[] length: '+customers.length);
+
+  // Test 1: Can we read the business doc?
+  try{
+    const doc=await db.collection('business').doc(BIZ_ID).get();
+    lines.push('Read business doc: OK (exists='+doc.exists+')');
+  }catch(e){lines.push('Read business doc: FAILED - '+e.code+': '+e.message);}
+
+  // Test 2: Can we read customers subcollection?
+  try{
+    const snap=await db.collection('business').doc(BIZ_ID).collection('customers').limit(10).get();
+    lines.push('Read customers: OK ('+snap.size+' docs found)');
+    snap.forEach(d=>lines.push('  - '+d.id+': '+JSON.stringify(d.data())));
+  }catch(e){lines.push('Read customers: FAILED - '+e.code+': '+e.message);}
+
+  // Test 3: Can we write a test customer?
+  try{
+    const testRef=db.collection('business').doc(BIZ_ID).collection('customers').doc('__test__');
+    await testRef.set({name:'__test__',ts:firebase.firestore.FieldValue.serverTimestamp()});
+    await testRef.delete();
+    lines.push('Write/delete test: OK');
+  }catch(e){lines.push('Write test: FAILED - '+e.code+': '+e.message);}
+
+  // Test 4: localStorage cache
+  try{
+    const cached=localStorage.getItem('ft_customers_cache');
+    lines.push('localStorage cache: '+(cached?JSON.parse(cached).length+' customers':'empty'));
+  }catch(e){lines.push('localStorage: error - '+e.message);}
+
+  const result=lines.join('\n');
+  console.log(result);
+  alert(result);
+}
 
 // ═══════════════════════════════════════
 // BOOT
