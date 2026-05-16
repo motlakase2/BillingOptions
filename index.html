@@ -792,11 +792,11 @@ function startListeners(){
   },{includeMetadataChanges:false});
 
   // ── Real-time customer listener (persistent master list) ──
-  // ── Real-time customer listener (persistent master list) ──
-  unsubCustomers=bizRef.collection('customers').orderBy('name').onSnapshot(
+  unsubCustomers=bizRef.collection('customers').onSnapshot(
     snap=>{
       customers=[];
       snap.forEach(doc=>customers.push({id:doc.id,...doc.data()}));
+      customers.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
       console.log('[FreshTrack] Customers from Firestore:',customers.length,customers.map(c=>c.name));
       try{localStorage.setItem('ft_customers_cache',JSON.stringify(customers));}catch(e){}
       // Try immediately and also after short delay (in case DOM wasn't ready)
@@ -1866,7 +1866,7 @@ async function runCustDiagnostic(){
 
   // Test 2: Can we read customers subcollection?
   try{
-    const snap=await db.collection('business').doc(BIZ_ID).collection('customers').limit(10).get();
+    const snap=await db.collection('business').doc(BIZ_ID).collection('customers').get();
     lines.push('Read customers: OK ('+snap.size+' docs found)');
     snap.forEach(d=>lines.push('  - '+d.id+': '+JSON.stringify(d.data())));
   }catch(e){lines.push('Read customers: FAILED - '+e.code+': '+e.message);}
