@@ -1299,17 +1299,7 @@ function showToast(msg,dur=2500){
 // ═══════════════════════════════════════
 // CUSTOMER MANAGEMENT
 // ═══════════════════════════════════════
-let customers=[];
-// Pre-load from localStorage cache so dropdown is instant on page load
-try{
-  const cached=localStorage.getItem('ft_customers_cache');
-  if(cached){
-    customers=JSON.parse(cached);
-    // Will call populateCustDropdown after DOM is ready
-    document.addEventListener('DOMContentLoaded',()=>populateCustDropdown(),{once:true});
-  }
-}catch(e){}
-
+let db, auth, currentUser=null;
 function loadCustomers(){
   // Now a no-op — customers are loaded via real-time listener in startListeners()
   // Kept for backward compatibility with any direct calls
